@@ -1,31 +1,30 @@
 import streamlit as st
 import requests
+import os
 
-# API Endpoint
-##API_URL = "http://127.0.0.1:8000/predict"
-API_URL = "https://healthcare-llm-production.up.railway.app/predict"
+# Detect if running in a cloud environment
+if "RAILWAY_ENVIRONMENT" in os.environ:
+    API_URL = "https://healthcare-llm-production.up.railway.app/predict"  # Cloud Deployment
+else:
+    API_URL = "http://127.0.0.1:8000/predict"  # Local Development
 
+st.title("Disease Prediction using LLM & ML")
 
-# Streamlit UI
-st.title("🩺 Disease Prediction using Symptoms")
+symptoms = st.text_input("Enter symptoms separated by commas (e.g., fever, headache, fatigue):")
 
-# Input field for symptoms
-symptoms = st.text_input("Enter symptoms separated by commas (e.g., fever, headache, fatigue)")
-
-# Predict button
 if st.button("Predict Disease"):
     if symptoms:
-        # Send request to FastAPI backend
-        response = requests.post(API_URL, json={"symptoms": symptoms.split(",")})
-
-        if response.status_code == 200:
+        try:
+            response = requests.post(API_URL, json={"symptoms": symptoms.split(",")})
             result = response.json()
-            st.success(f"**Predicted Disease:** {result['predicted_disease']}")
-            st.info(f"**AI Explanation:** {result['llm_explanation']}")
-        else:
-            st.error("Error occurred while fetching prediction. Please check the API.")
-    else:
-        st.warning("⚠️ Please enter symptoms to proceed.")
 
-# Run the Streamlit app using:
-# `streamlit run streamlit_app.py`
+            st.success(f"**Predicted Disease:** {result.get('predicted_disease', 'Unknown')}")
+            
+            # Handle missing LLM explanation
+            llm_explanation = result.get("llm_explanation", "⚠️ AI explanation not available.")
+            st.info(f"**AI Explanation:** {llm_explanation}")
+
+        except requests.exceptions.ConnectionError:
+            st.error("❌ Could not connect to API. Ensure FastAPI is running locally or check deployment.")
+    else:
+        st.warning("⚠️ Please enter symptoms to get a prediction.")
