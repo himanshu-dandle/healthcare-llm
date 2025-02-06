@@ -5,3 +5,5 @@ pandas
 openai
 requests
 streamlit
+python-dotenv
+scikit-learn
