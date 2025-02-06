@@ -1,0 +1,13 @@
+# Ignore virtual environment
+healthcare_venv/
+*.pyc
+__pycache__/
+
+# Ignore environment variables
+.env
+
+# Ignore dataset & logs
+data/raw/
+data/processed/
+logs/
+
