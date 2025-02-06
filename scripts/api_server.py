@@ -4,6 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 import openai
 import os
+import logging
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -40,6 +41,26 @@ app = FastAPI(title="Disease Prediction API")
 class SymptomsRequest(BaseModel):
     symptoms: list[str]
 
+# Function to query OpenAI for explanation
+def query_openai(disease: str):
+    """Query OpenAI to get an explanation of the predicted disease."""
+    logging.info(f"Querying OpenAI for disease: {disease}")
+
+    try:
+        prompt = f"Explain the disease {disease} in simple terms along with its symptoms, causes, and treatment."
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "system", "content": prompt}]
+        )
+
+        explanation = response.choices[0].message.content.strip()
+        logging.info(f"OpenAI Response: {explanation}")
+        return explanation
+
+    except Exception as e:
+        logging.error(f"OpenAI API call failed: {e}")
+        return "⚠️ AI explanation not available."
+
 @app.post("/predict")
 def predict_disease(request: SymptomsRequest):
     """Predict disease based on symptoms."""
@@ -61,10 +82,14 @@ def predict_disease(request: SymptomsRequest):
 
     predicted_disease = model.predict(input_vector)[0]
 
+    # Query OpenAI for an explanation of the predicted disease
+    llm_explanation = query_openai(predicted_disease)
+
     return {
         "predicted_disease": predicted_disease,
         "recognized_symptoms": recognized_symptoms,
-        "unrecognized_symptoms": unrecognized_symptoms
+        "unrecognized_symptoms": unrecognized_symptoms,
+        "llm_explanation": llm_explanation
     }
 
 if __name__ == "__main__":
