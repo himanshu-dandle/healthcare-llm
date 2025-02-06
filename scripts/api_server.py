@@ -4,7 +4,6 @@ import uvicorn
 from fastapi import FastAPI
 import openai
 import os
-import logging
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -41,34 +40,27 @@ app = FastAPI(title="Disease Prediction API")
 class SymptomsRequest(BaseModel):
     symptoms: list[str]
 
-# Function to query OpenAI for explanation
 def query_openai(disease: str):
     """Query OpenAI to get an explanation of the predicted disease."""
-    logging.info(f"Querying OpenAI for disease: {disease}")
+    prompt = f"Explain the disease {disease} in simple terms along with its symptoms, causes, and treatment."
 
     try:
-        prompt = f"Explain the disease {disease} in simple terms along with its symptoms, causes, and treatment."
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": prompt}]
         )
-
-        explanation = response.choices[0].message.content.strip()
-        logging.info(f"OpenAI Response: {explanation}")
-        return explanation
-
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        logging.error(f"OpenAI API call failed: {e}")
+        print(f"OpenAI API Error: {e}")
         return "⚠️ AI explanation not available."
 
 @app.post("/predict")
 def predict_disease(request: SymptomsRequest):
-    """Predict disease based on symptoms."""
+    """Predict disease based on symptoms and return LLM explanation."""
     input_vector = pd.DataFrame([[0] * len(symptom_columns)], columns=symptom_columns)
-    
+
     recognized_symptoms = []
     unrecognized_symptoms = []
-    
     dataset_symptoms = [col.lower().replace(" ", "_") for col in symptom_columns]
 
     for symptom in request.symptoms:
@@ -82,7 +74,7 @@ def predict_disease(request: SymptomsRequest):
 
     predicted_disease = model.predict(input_vector)[0]
 
-    # Query OpenAI for an explanation of the predicted disease
+    # 🔹 Ensure OpenAI API is called correctly
     llm_explanation = query_openai(predicted_disease)
 
     return {
